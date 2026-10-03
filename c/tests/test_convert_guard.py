@@ -23,6 +23,7 @@ except ImportError:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from convert_fp8_to_int4 import (  # noqa: E402
+    ALLOWED_OTHER_MODEL_TYPES,
     GLM52_MODEL_TYPES,
     OTHER_FAMILY_PATHS,
     check_model_family,
@@ -32,7 +33,7 @@ from family_registry import FAMILIES  # noqa: E402
 
 class ConvertGuardTest(unittest.TestCase):
     def test_glm52_passes(self):
-        for model_type in sorted(GLM52_MODEL_TYPES):
+        for model_type in sorted(GLM52_MODEL_TYPES | ALLOWED_OTHER_MODEL_TYPES):
             check_model_family({"model_type": model_type}, "x")  # nessuna eccezione
 
     def test_every_other_family_is_refused_with_its_own_pointer(self):
@@ -40,6 +41,8 @@ class ConvertGuardTest(unittest.TestCase):
             if family.id == "glm":
                 continue
             for model_type in family.model_types:
+                if model_type in ALLOWED_OTHER_MODEL_TYPES:
+                    continue
                 with self.assertRaises(SystemExit) as caught:
                     check_model_family({"model_type": model_type}, "some/repo")
                 message = str(caught.exception)
@@ -75,7 +78,7 @@ class ConvertGuardTest(unittest.TestCase):
                          "sia GLM-5.2: il convertitore rifiuterebbe il suo "
                          "stesso modello")
         others = {mt for f in FAMILIES if f.id != "glm" for mt in f.model_types}
-        self.assertEqual(others, set(OTHER_FAMILY_PATHS),
+        self.assertEqual(others, set(OTHER_FAMILY_PATHS) | ALLOWED_OTHER_MODEL_TYPES,
                          "una famiglia del registry non ha la sua voce nella "
                          "guardia (o la guardia ne elenca una rimossa): il "
                          "puntatore per-famiglia non verrebbe mostrato")
